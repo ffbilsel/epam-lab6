@@ -46,10 +46,9 @@ export interface ResetDeps {
  */
 export function buildPasswordResetService(deps: ResetDeps = {}): PasswordResetService {
   const clock = deps.clock ?? systemClock;
-  const resolveMailer = (): Mailer => deps.mailer ?? getMailer();
+  const mailer = deps.mailer ?? getMailer();
   const sessions = deps.sessions ?? buildSessionService({ clock });
-  const resolveNotifications = (): NotificationService =>
-    deps.notifications ?? buildNotificationService(resolveMailer());
+  const notifications = deps.notifications ?? buildNotificationService(mailer);
 
   return {
     requestReset: async (email): Promise<void> => {
@@ -84,7 +83,7 @@ export function buildPasswordResetService(deps: ResetDeps = {}): PasswordResetSe
       });
 
       if (issued !== null && to !== null) {
-        await resolveMailer().send({
+        await mailer.send({
           to,
           subject: 'Reset your password',
           text: `Reset token: ${issued}\nExpires in ${env.RESET_TOKEN_TTL_SECONDS} seconds.`,
@@ -122,7 +121,6 @@ export function buildPasswordResetService(deps: ResetDeps = {}): PasswordResetSe
       const user = await userRepo.findById(userId);
       if (user !== null) {
         const eventId = uuidv4();
-        const notifications = resolveNotifications();
         await notifications.notifyPasswordChanged({ id: user.id, email: user.email }, eventId);
         await notifications.notifyResetCompleted({ id: user.id, email: user.email }, eventId);
       }
