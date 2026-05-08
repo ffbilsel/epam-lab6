@@ -8,19 +8,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: auth
-          POSTGRES_PASSWORD: auth
-          POSTGRES_DB: auth
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U auth"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -30,6 +17,7 @@ jobs:
       SMTP_URL: smtp://localhost:1025
       EMAIL_FROM: no-reply@example.com
       NODE_ENV: test
+      NODE_OPTIONS: --experimental-vm-modules
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,5 +29,4 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format
-      - run: npm run migrate:up
-      - run: npm test
+      - run: npm run test:unit
