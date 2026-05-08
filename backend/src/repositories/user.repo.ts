@@ -64,11 +64,7 @@ export async function insertUnverified(
 }
 
 /** Mark email verified, clearing lockout counters. */
-export async function markEmailVerified(
-  userId: string,
-  at: Date,
-  client?: Runner,
-): Promise<void> {
+export async function markEmailVerified(userId: string, at: Date, client?: Runner): Promise<void> {
   await r(client).query(
     `UPDATE users
        SET email_verified_at = $2, updated_at = now()
@@ -83,10 +79,10 @@ export async function updatePasswordHash(
   passwordHash: string,
   client?: Runner,
 ): Promise<void> {
-  await r(client).query(
-    `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
-    [userId, passwordHash],
-  );
+  await r(client).query(`UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, [
+    userId,
+    passwordHash,
+  ]);
 }
 
 /** Clear lockout state and reset counters. */

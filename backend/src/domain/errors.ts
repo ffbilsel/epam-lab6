@@ -72,9 +72,7 @@ export class LockedError extends DomainError {
       title: 'Locked',
       status: 423,
       detail,
-      ...(retryAfterSeconds !== undefined
-        ? { details: { retryAfterSeconds } }
-        : {}),
+      ...(retryAfterSeconds !== undefined ? { details: { retryAfterSeconds } } : {}),
     });
   }
 }

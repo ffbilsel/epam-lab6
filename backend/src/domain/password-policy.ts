@@ -25,11 +25,9 @@ export function validatePassword(password: string): PolicyResult {
 }
 
 /** Zod refinement that enforces the password policy. */
-export const PasswordSchema = z
-  .string()
-  .superRefine((val, ctx) => {
-    const r = validatePassword(val);
-    if (!r.ok) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: r.reason ?? 'invalid password' });
-    }
-  });
+export const PasswordSchema = z.string().superRefine((val, ctx) => {
+  const r = validatePassword(val);
+  if (!r.ok) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: r.reason ?? 'invalid password' });
+  }
+});

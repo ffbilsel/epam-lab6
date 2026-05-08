@@ -19,12 +19,7 @@ const tsJestPreset = {
 module.exports = {
   rootDir: '.',
   testEnvironment: 'node',
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/server.ts',
-    '!src/app.ts',
-    '!src/infra/**',
-  ],
+  collectCoverageFrom: ['src/**/*.ts', '!src/server.ts', '!src/app.ts', '!src/infra/**'],
   coverageThreshold: {
     'src/domain/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },
     'src/services/**/*.ts': { lines: 80, branches: 80, functions: 80, statements: 80 },

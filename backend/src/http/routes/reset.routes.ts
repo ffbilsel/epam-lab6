@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { validate } from '../middleware/validate.js';
 import { buildRateLimiter } from '../middleware/rate-limit.js';
-import {
-  ResetConfirmBodySchema,
-  ResetRequestBodySchema,
-} from '../schemas/reset.schemas.js';
+import { ResetConfirmBodySchema, ResetRequestBodySchema } from '../schemas/reset.schemas.js';
 import { buildPasswordResetService } from '../../services/password-reset.service.js';
 
 const reset = buildPasswordResetService();

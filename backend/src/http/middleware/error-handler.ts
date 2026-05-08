@@ -21,13 +21,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next): void =
   }
 
   logger.error({ err }, 'unhandled error');
-  res
-    .status(500)
-    .type('application/problem+json')
-    .send({
-      type: 'https://example.com/problems/internal',
-      title: 'Internal Server Error',
-      status: 500,
-      detail: 'An unexpected error occurred.',
-    });
+  res.status(500).type('application/problem+json').send({
+    type: 'https://example.com/problems/internal',
+    title: 'Internal Server Error',
+    status: 500,
+    detail: 'An unexpected error occurred.',
+  });
 };

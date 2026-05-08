@@ -54,7 +54,9 @@ export function buildSessionService(deps: SessionDeps = {}): SessionService {
     },
 
     verify: async (rawJwt): Promise<SessionClaims> => {
-      const secrets = [env.JWT_SECRET, env.JWT_SECRET_PREV].filter((s): s is string => s.length > 0);
+      const secrets = [env.JWT_SECRET, env.JWT_SECRET_PREV].filter(
+        (s): s is string => s.length > 0,
+      );
       let decoded: unknown = null;
       let lastError: unknown = null;
       for (const secret of secrets) {

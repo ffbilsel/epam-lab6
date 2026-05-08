@@ -30,7 +30,9 @@ accountRouter.post(
         ...(req.ip !== undefined ? { ip: req.ip } : {}),
         ...(ua !== undefined ? { userAgent: ua } : {}),
       })
-      .then(() => res.status(202).json({ message: 'If the email is new, a verification has been sent.' }))
+      .then(() =>
+        res.status(202).json({ message: 'If the email is new, a verification has been sent.' }),
+      )
       .catch(next);
   },
 );
@@ -51,7 +53,11 @@ accountRouter.post(
     const { email } = req.body as { email: string };
     verification
       .resend(email)
-      .then(() => res.status(202).json({ message: 'If the email exists and is unverified, a new token was sent.' }))
+      .then(() =>
+        res
+          .status(202)
+          .json({ message: 'If the email exists and is unverified, a new token was sent.' }),
+      )
       .catch(next);
   },
 );

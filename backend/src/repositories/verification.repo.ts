@@ -49,10 +49,7 @@ export async function findValidByTokenHash(
 
 /** Mark a verification consumed. */
 export async function markConsumed(id: string, at: Date, client?: Runner): Promise<void> {
-  await r(client).query(
-    `UPDATE email_verifications SET consumed_at = $2 WHERE id = $1`,
-    [id, at],
-  );
+  await r(client).query(`UPDATE email_verifications SET consumed_at = $2 WHERE id = $1`, [id, at]);
 }
 
 /** Invalidate all live tokens for a user (set consumed_at = now). */
