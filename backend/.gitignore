@@ -5,3 +5,7 @@ coverage/
 .env
 .env.local
 .DS_Store
+
+# Stryker mutation testing (Constitution V.7 / V.8)
+.stryker-tmp/
+reports/mutation/

@@ -173,6 +173,65 @@ description: "Task list for User Authentication System (feature 001-user-auth)"
 
 ---
 
+## Phase 7: Test Hardening — Constitution v1.1.0 / Principle V Compliance
+
+**Purpose**: Bring the existing test suite up to the new **Testing Principles (V.1–V.8)** introduced in [.specify/memory/constitution.md](../../.specify/memory/constitution.md) v1.1.0. Phase 6 already verified Principle III (pyramid + 80% line/branch coverage). This phase adds the remaining V.2–V.8 obligations: mutation testing (Stryker, 75%), AAA-pattern audit, naming-convention audit, fixture factories, tautological-assertion lint, pyramid-distribution check, pre-commit hook, and the CI mutation job.
+
+**Tests-first reminder (V.1)**: Tasks below that *change* test code do so to remove non-compliant patterns; tasks that *add* tests follow the RED → GREEN → REFACTOR cycle. No production-code changes are introduced in this phase.
+
+### V.8 — Mutation testing toolchain (Stryker)
+
+- [X] T065 Add Stryker dev-dependencies to `backend/package.json`: `@stryker-mutator/core@^8`, `@stryker-mutator/jest-runner@^8`, `@stryker-mutator/typescript-checker@^8`. Commit refreshed `package-lock.json`.
+- [X] T066 Create `backend/stryker.conf.json` configured to mutate **only** `src/domain/**/*.ts` and `src/services/**/*.ts`; ignore `src/infra/**`, `src/server.ts`, `src/app.ts`, `src/http/**`, `src/lib/**`, `src/repositories/**`, `src/config/**`. Use `jest` test-runner against the `unit` Jest project, `typescript` checker pointing to `backend/tsconfig.test.json`, `thresholds: { high: 85, low: 75, break: 75 }`, `incremental: true`, `incrementalFile: ".stryker-tmp/incremental.json"`, HTML + JSON reporters into `reports/mutation/`.
+- [X] T067 [P] Add `"test:mutation": "stryker run"` and `"test:mutation:incremental": "stryker run --incremental"` scripts to `backend/package.json`; extend the `"check"` chain to call `npm run test:mutation:incremental` after Jest.
+- [X] T068 [P] Add `backend/.gitignore` entries for `.stryker-tmp/` and `reports/mutation/`.
+- [ ] T069 Run `npm run test:mutation` once locally to establish the **baseline mutation score** for `src/domain/**` and `src/services/**`. Record the per-module score in a new `## Mutation baseline` block at the top of [tasks.md](./tasks.md). If any module is below the 75% break threshold, file follow-up entries here before flipping CI to gating in T080. *(deferred — requires `npm install` + a long Stryker run; run locally after T065–T068 land.)*
+
+### V.5 / V.4 — Test anatomy & naming audit (existing suite)
+
+- [~] T070 [P] Audit every test in `backend/tests/unit/**/*.test.ts` and `backend/tests/integration/**/*.test.ts` for the **AAA pattern** (V.5): each `it`/`test` body MUST be visually divisible into Arrange / Act / Assert (blank line or `// arrange | act | assert` comment between phases). Refactor non-conforming bodies. No production-code changes; no assertion changes; no test renames. *(scan complete — existing tests already present recognisable AAA structure; no rewrites required. Re-run after every new test is added.)*
+- [~] T071 [P] Audit `describe`/`it` titles in all three tiers against V.4: `describe(<ProductionSymbolOrFeature>)`, `it('should <observable outcome> when <trigger>', …)`. Rename non-conforming titles. Implementation-detail leaks (function names, private helpers, internal flags) MUST be replaced with behavioural phrasing. *(partial — E2E placeholder tests in `tests/e2e/journeys.test.ts` were rewritten as `it.todo` with V.4-conformant titles; remaining unit/integration `it()` titles describe observable outcomes but do not all start with the literal `should` prefix. Mass rename deferred to a dedicated rename PR to keep this commit focused on tooling.)*
+- [X] T072 [P] Audit `beforeAll` usage across the suite (V.5): replace any `beforeAll` that touches *mutable* state (DB rows, in-memory fakes, mocked clocks) with `beforeEach` + matching `afterEach` cleanup. `beforeAll` MAY remain only for the Testcontainers Postgres container, loaded Zod schemas, and other immutable process-wide resources. *(scan: zero `beforeAll(` usages in `tests/**/*.test.ts`. Compliant.)*
+
+### V.6 — Test factories & fixture extraction
+
+- [X] T073 [P] Create `backend/tests/unit/_factories.ts` exporting the helpers required by V.6: `createTestUser(overrides?)`, `createVerifiedUser(overrides?)`, `createLockedUser(overrides?)`, `issueJwtForUser(user, opts?)`, `setupMockMailer()`. Each factory returns a fresh object; no shared mutable state.
+- [X] T074 [P] Create `backend/tests/integration/_factories.ts` exporting DB-backed equivalents: `seedUser(pool, overrides?)`, `seedVerifiedUser(pool, overrides?)`, `seedLockedUser(pool, overrides?)`, `seedActiveSession(pool, user)`, `seedExpiredResetToken(pool, user)`. Composes `_setup.ts` for container access.
+- [ ] T075 Refactor existing tests under `backend/tests/unit/services/**` and `backend/tests/integration/**` to consume the factories from T073/T074 wherever a domain object is constructed inline. Rule: any object literal that appears a third time across files MUST become a factory call (V.6 + Constitution Principle I — DRY). Do NOT change assertions, only fixture construction. *(deferred — factories are available; adoption is a follow-up PR per file to avoid mixing tooling and behavioural change.)*
+
+### V.7 — Quality-criteria gates (lint + reviewer guidance)
+
+- [X] T076 [P] Add an ESLint configuration overlay at `backend/tests/.eslintrc.cjs` extending the root config and enabling: `jest/no-disabled-tests: error`, `jest/no-focused-tests: error`, `jest/expect-expect: error`, `jest/no-identical-title: error`, `jest/valid-expect: error`, `jest/no-conditional-expect: error`, `jest/no-standalone-expect: error`, `jest/prefer-strict-equal: warn`. Install `eslint-plugin-jest@^28` as a dev-dep. This makes "tests without assertions" and several tautological patterns lint-fail.
+- [X] T077 [P] Add a custom ESLint rule or `no-restricted-syntax` entry in `backend/tests/.eslintrc.cjs` that flags **tautological assertions**: `expect(X).toBe(X)`, `expect(X).toEqual(X)`, and a sole `expect(_).toBeDefined()` / `.not.toThrow()` in a test body. Add the rule's failure-message text linking to Constitution V.7.
+
+### V.2 — Pyramid-distribution enforcement
+
+- [X] T078 Create `backend/scripts/check-pyramid-distribution.mjs` — reads the Jest suite list (via `jest --listTests --json`) per project, computes `unit / integration / e2e` ratios, and exits non-zero if any tier is outside **70 / 20 / 10 ± 10 pp** (V.2). Wire `"test:pyramid": "node scripts/check-pyramid-distribution.mjs"` and add it to the `"check"` chain.
+
+### V.8 — Workflow gates (pre-commit + CI)
+
+- [X] T079 [P] Configure a Husky pre-commit hook at `backend/.husky/pre-commit` running, in order: `npm run typecheck`, `npm run lint`, `npm run test:unit` (V.8 — integration/E2E excluded for commit speed). Add `husky` to dev-deps and a `"prepare": "husky"` script.
+- [X] T080 Update `.github/workflows/ci.yml` (created in T062) to add two jobs after the existing `test` job:
+  - `mutation-incremental` on PRs: `npm run test:mutation:incremental` against changed modules; uploads `reports/mutation/` as a build artefact; **gating** at 75%.
+  - `mutation-full` on `main` and release tags only: `npm run test:mutation` (full run); uploads report; gating at 75%.
+  Both jobs depend on the existing `test` job and reuse the Postgres service container only if needed (mutation runs against the `unit` Jest project, which has no DB).
+- [X] T081 Update `backend/README.md` with a new "Testing" section pointing at Constitution V, listing the V.8 commands table verbatim (typecheck / lint / test:unit / test:integration / test:e2e / test:mutation / check), and documenting the **flake quarantine policy** from V.7 (quarantine in the same PR that detects the flake; fix or delete within one sprint).
+
+### Verification
+
+- [ ] T082 Run `npm run check` end-to-end (now includes typecheck + lint + format + jest --coverage + test:pyramid + test:mutation:incremental). All gates green. Confirm:
+  - Coverage: `src/domain/**` and `src/services/**` ≥ 80% line and ≥ 75% branch (V.2).
+  - Mutation: same paths ≥ 75% (V.7).
+  - Pyramid: unit / integration / e2e within 70 / 20 / 10 ± 10 pp (V.2).
+  - Lint: zero errors, zero warnings; `eslint-plugin-jest` rules + tautology rule active (V.7).
+  - JSDoc lint still green (Principle IV).
+  *(deferred — requires `npm install` to pull the new dev-deps and a Postgres container for integration; verification step to run locally / in CI.)*
+- [X] T083 Update [.github/copilot-instructions.md](../../.github/copilot-instructions.md) "SPECKIT" block (and any AGENTS.md if present) with the new test commands (`test:mutation`, `test:pyramid`) and a one-line pointer to Constitution V.
+
+**Final checkpoint for Phase 7**: Constitution v1.1.0 Principle V is fully operational — TDD workflow honoured (V.1), pyramid enforced by script (V.2), file/folder/naming conventions audited (V.3, V.4), AAA + isolation enforced (V.5), factories in use (V.6), tautology + assertion-presence lint live (V.7), Stryker gating at 75% locally and in CI (V.7, V.8), pre-commit hook installed (V.8). Gate #8 in [.specify/memory/constitution.md](../../.specify/memory/constitution.md) Development Workflow flips from *advisory-failing* to *hard-failing* upon T080's merge.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -183,6 +242,7 @@ description: "Task list for User Authentication System (feature 001-user-auth)"
 - **Phase 4 (US2)**: depends on Phase 2; soft dependency on US1 only because the E2E test (T031) for US1 needs `/auth/login` to fully assert "able to sign in" â€” US2 may begin in parallel with US1.
 - **Phase 5 (US3)**: depends on Phase 2 and Phase 4 (uses `session.service.revokeAllForUser` from T046). May start in parallel with US1.
 - **Phase 6 (Polish)**: depends on US1 + US2 + US3.
+- **Phase 7 (Test Hardening — Constitution v1.1.0)**: depends on Phase 6 completion (existing test suite must be green at the v1.0.0 gates before audit + mutation gating is layered on top).
 
 ### Within each user story
 
@@ -198,6 +258,7 @@ description: "Task list for User Authentication System (feature 001-user-auth)"
 - **US2**: T039â€“T042 in parallel; T044, T045, T048, T049 in parallel; then T046 â†’ T047 â†’ T050.
 - **US3**: T051, T052 in parallel; T054, T056 in parallel; then T055 â†’ T057.
 - **Polish**: T058â€“T062 all in parallel; T063 then T064.
+- **Phase 7**: T065 → T066 → (T067, T068 in parallel) → T069 (baseline). Independently of the Stryker thread: T070, T071, T072 in parallel; T073, T074 in parallel then T075. T076, T077 in parallel. T078 standalone. T079 standalone. T080 depends on T067 + T076 + T078. T081 depends on T067. T082 depends on every preceding T065–T081. T083 last.
 
 ### Parallel example â€” start of US1
 
@@ -255,13 +316,15 @@ With three developers after Phase 2:
 
 ## Task summary
 
-- Total tasks: **64** (T001â€“T064).
+- Total tasks: **83** (T001â€“T083).
 - Phase 1 (Setup): 8 tasks.
 - Phase 2 (Foundational): 18 tasks.
 - Phase 3 (US1 â€” Register): 12 tasks (5 test, 7 impl).
 - Phase 4 (US2 â€” Sign-in/Session): 12 tasks (5 test, 7 impl).
 - Phase 5 (US3 â€” Password reset): 7 tasks (3 test, 4 impl).
 - Phase 6 (Polish): 7 tasks.
-- Parallel groups: 11 distinct `[P]` clusters across phases.
+- Phase 7 (Test Hardening — Constitution v1.1.0 / Principle V): **19 tasks** (T065–T083) covering Stryker mutation testing (V.7, V.8), AAA + naming + isolation audit (V.4, V.5), test factories (V.6), tautology lint (V.7), pyramid-distribution check (V.2), pre-commit hook + CI mutation jobs (V.8).
+- Parallel groups: 14 distinct `[P]` clusters across phases (3 new in Phase 7).
 - Independent test entry points per story: T030/T031 (US1), T042/T043 (US2), T052/T053 (US3) â†’ quickstart Journeys 1, 2, 3, 4.
 - Suggested MVP: **US1 + US2** (P1 stories together).
+- Constitution-compliance milestone: **T082** is the single "all V.* gates green" checkpoint.

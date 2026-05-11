@@ -30,3 +30,58 @@ jobs:
       - run: npm run lint
       - run: npm run format
       - run: npm run test:unit
+      - run: npm run test:pyramid
+
+  mutation-incremental:
+    needs: build-and-test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_OPTIONS: --experimental-vm-modules
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Stryker incremental (changed modules)
+        run: npm run test:mutation:incremental
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report-incremental-${{ github.event.pull_request.number }}
+          path: backend/reports/mutation/
+
+  mutation-full:
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_OPTIONS: --experimental-vm-modules
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Stryker full run (≥75% gate)
+        run: npm run test:mutation
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report-full-${{ github.sha }}
+          path: backend/reports/mutation/

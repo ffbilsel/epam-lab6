@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_": "Constitution v1.1.0 / Principle V.7 + V.8 — mutation testing for business-logic modules.",
+  "packageManager": "npm",
+  "testRunner": "jest",
+  "jest": {
+    "projectType": "custom",
+    "configFile": "jest.config.cjs",
+    "config": {
+      "testMatch": ["<rootDir>/tests/unit/**/*.test.ts"]
+    }
+  },
+  "checkers": ["typescript"],
+  "tsconfigFile": "tsconfig.test.json",
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/domain/**/*.ts",
+    "src/services/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.d.ts"
+  ],
+  "ignorePatterns": [
+    "src/infra/**",
+    "src/http/**",
+    "src/repositories/**",
+    "src/lib/**",
+    "src/config/**",
+    "src/server.ts",
+    "src/app.ts",
+    "dist/**",
+    "coverage/**",
+    "node_modules/**",
+    "tests/integration/**",
+    "tests/e2e/**"
+  ],
+  "thresholds": {
+    "high": 85,
+    "low": 75,
+    "break": 75
+  },
+  "incremental": true,
+  "incrementalFile": ".stryker-tmp/incremental.json",
+  "tempDirName": ".stryker-tmp",
+  "concurrency": 2,
+  "timeoutMS": 60000,
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/report.json"
+  },
+  "logLevel": "info"
+}

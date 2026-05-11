@@ -13,7 +13,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended-type-checked',
     'plugin:jsdoc/recommended-typescript-error',
   ],
-  ignorePatterns: ['dist/', 'node_modules/', 'coverage/', '*.cjs', 'jest.config.ts', 'tests/'],
+  ignorePatterns: ['dist/', 'node_modules/', 'coverage/', 'reports/', '.stryker-tmp/', '*.cjs', 'jest.config.ts'],
   rules: {
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/no-non-null-assertion': 'error',
